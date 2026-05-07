@@ -105,6 +105,9 @@ pub fn apply_forecast_response(state: &mut AionFmUiState, response: ForecastResp
         state.forecast.selected_entity = Some(first.entity_id.clone());
         state.forecast.selected_target = Some(first.target.clone());
         state.forecast.chart = forecast_chart(first);
+        state.forecast.decomposition = first.decomposition.clone();
+        state.forecast.distribution = first.distribution.clone();
+        state.forecast.imputed_history = first.imputed_history.clone();
         state.scenarios.chart = scenario_chart(first);
         state.regimes.chart = regime_chart(first);
         state.metadata.entity_id = Some(first.entity_id.clone());
@@ -131,8 +134,13 @@ mod tests {
             point_forecast: vec![1.0, 2.0],
             quantiles: BTreeMap::new(),
             prediction_intervals: BTreeMap::new(),
+            decomposition: None,
+            distribution: None,
+            imputed_history: None,
             scenario_paths: None,
             regime_probabilities: None,
+            regime_timeline: None,
+            constraint_report: None,
             explanation: None,
             metadata: BTreeMap::new(),
         });
@@ -149,8 +157,13 @@ mod tests {
             point_forecast: vec![1.0, 2.0],
             quantiles: BTreeMap::new(),
             prediction_intervals: BTreeMap::new(),
+            decomposition: None,
+            distribution: None,
+            imputed_history: None,
             scenario_paths: Some(vec![vec![1.0, 2.0]]),
             regime_probabilities: Some(BTreeMap::from([("stable".into(), 1.0)])),
+            regime_timeline: None,
+            constraint_report: None,
             explanation: None,
             metadata: BTreeMap::new(),
         };

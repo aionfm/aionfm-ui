@@ -3,7 +3,10 @@ use crate::{
     components::{ControlPanelState, PanelDescriptor, PanelId},
     roles::UserRole,
 };
-use aionfm_utils::{ForecastResponse, Metadata, ModelDescriptor, ServiceStatus};
+use aionfm_utils::{
+    DistributionForecast, ForecastDecomposition, ForecastResponse, Metadata, ModelDescriptor,
+    ServiceStatus,
+};
 use serde::{Deserialize, Serialize};
 
 /// Forecast dashboard selections and rendered chart model.
@@ -12,6 +15,9 @@ pub struct ForecastDashboardState {
     pub selected_entity: Option<String>,
     pub selected_target: Option<String>,
     pub chart: ForecastChart,
+    pub decomposition: Option<ForecastDecomposition>,
+    pub distribution: Option<DistributionForecast>,
+    pub imputed_history: Option<Vec<f32>>,
     pub last_response: Option<ForecastResponse>,
 }
 
