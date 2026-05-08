@@ -50,3 +50,18 @@ pub struct ScenarioChart {
 pub struct RegimeChart {
     pub segments: Vec<RegimeSegment>,
 }
+
+/// Single monitoring metric for compact operations dashboards.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MetricBar {
+    pub label: String,
+    pub value: f32,
+    pub threshold: Option<f32>,
+}
+
+/// Chart model for health, evaluation, and alert summaries.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct MonitoringChart {
+    pub metrics: Vec<MetricBar>,
+    pub alerts: Vec<String>,
+}

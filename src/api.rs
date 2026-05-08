@@ -1,6 +1,6 @@
 use aionfm_utils::{
-    AdaptationRequest, BatchForecastRequest, ForecastResponse, InterpretationRequest,
-    ModelDescriptor, ScenarioRequest, ServiceStatus,
+    AdaptationRequest, BatchForecastRequest, EvaluationReport, EvaluationRequest, ForecastResponse,
+    InterpretationRequest, ModelDescriptor, ScenarioRequest, ServiceStatus,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -48,6 +48,10 @@ pub trait UiApiService {
         &self,
         request: InterpretationRequest,
     ) -> impl std::future::Future<Output = Result<ForecastResponse, Self::Error>>;
+    fn evaluate(
+        &self,
+        request: EvaluationRequest,
+    ) -> impl std::future::Future<Output = Result<EvaluationReport, Self::Error>>;
     fn models(
         &self,
     ) -> impl std::future::Future<Output = Result<Vec<ModelDescriptor>, Self::Error>>;
@@ -128,6 +132,10 @@ impl UiApiService for WasmApiService {
         request: InterpretationRequest,
     ) -> Result<ForecastResponse, Self::Error> {
         self.post_json("/v1/interpretation", &request).await
+    }
+
+    async fn evaluate(&self, request: EvaluationRequest) -> Result<EvaluationReport, Self::Error> {
+        self.post_json("/v1/evaluate", &request).await
     }
 
     async fn models(&self) -> Result<Vec<ModelDescriptor>, Self::Error> {

@@ -1,11 +1,11 @@
 use crate::{
-    charts::{ForecastChart, RegimeChart, ScenarioChart},
+    charts::{ForecastChart, MonitoringChart, RegimeChart, ScenarioChart},
     components::{ControlPanelState, PanelDescriptor, PanelId},
     roles::UserRole,
 };
 use aionfm_utils::{
-    DistributionForecast, ForecastDecomposition, ForecastResponse, Metadata, ModelDescriptor,
-    ServiceStatus,
+    DistributionForecast, EvaluationReport, ForecastDecomposition, ForecastResponse, Metadata,
+    ModelDescriptor, ReconciliationReport, RetrievalMatch, ServiceStatus,
 };
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,7 @@ pub struct ForecastDashboardState {
     pub decomposition: Option<ForecastDecomposition>,
     pub distribution: Option<DistributionForecast>,
     pub imputed_history: Option<Vec<f32>>,
+    pub retrieval_matches: Vec<RetrievalMatch>,
     pub last_response: Option<ForecastResponse>,
 }
 
@@ -47,6 +48,9 @@ pub struct MetadataPanelState {
 pub struct MonitoringState {
     pub service_status: Option<ServiceStatus>,
     pub models: Vec<ModelDescriptor>,
+    pub reconciliation_report: Option<ReconciliationReport>,
+    pub evaluation_report: Option<EvaluationReport>,
+    pub chart: MonitoringChart,
 }
 
 /// Root UI state for dashboards and operations views.
