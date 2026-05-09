@@ -78,6 +78,41 @@ pub fn scenario_chart(entity: &EntityForecast) -> ScenarioChart {
 }
 
 pub fn regime_chart(entity: &EntityForecast) -> RegimeChart {
+    if let Some(timeline) = &entity.regime_timeline {
+        if !timeline.is_empty() {
+            let mut segments = Vec::new();
+            let mut start = timeline[0].horizon_index;
+            let mut label = timeline[0].label.clone();
+            let mut probability_sum = 0.0;
+            let mut count = 0usize;
+
+            for step in timeline {
+                if step.label != label && count > 0 {
+                    segments.push(RegimeSegment {
+                        start: start.to_string(),
+                        end: step.horizon_index.to_string(),
+                        label,
+                        probability: probability_sum / count as f32,
+                    });
+                    start = step.horizon_index;
+                    label = step.label.clone();
+                    probability_sum = 0.0;
+                    count = 0;
+                }
+                probability_sum += step.probability;
+                count += 1;
+            }
+
+            segments.push(RegimeSegment {
+                start: start.to_string(),
+                end: entity.forecast_horizon.to_string(),
+                label,
+                probability: probability_sum / count.max(1) as f32,
+            });
+            return RegimeChart { segments };
+        }
+    }
+
     let mut cursor = 0;
     let segments = entity
         .regime_probabilities
@@ -201,7 +236,8 @@ fn monitoring_threshold(key: &str) -> Option<f32> {
 mod tests {
     use super::*;
     use aionfm_utils::{
-        EntityForecast, EvaluationReport, ReconciliationReport, RetrievalMatch, ServiceStatus,
+        EntityForecast, EvaluationReport, ReconciliationReport, RegimeStep, RetrievalMatch,
+        ServiceStatus,
     };
     use std::collections::BTreeMap;
 
@@ -227,6 +263,56 @@ mod tests {
             metadata: BTreeMap::new(),
         });
         assert_eq!(chart.point.unwrap().points.len(), 2);
+    }
+
+    #[test]
+    fn regime_chart_prefers_timeline_segments() {
+        let chart = regime_chart(&EntityForecast {
+            entity_id: "entity".into(),
+            forecast_horizon: 3,
+            frequency: "D".into(),
+            target: "value".into(),
+            point_forecast: vec![1.0, 2.0, 3.0],
+            quantiles: BTreeMap::new(),
+            prediction_intervals: BTreeMap::new(),
+            decomposition: None,
+            distribution: None,
+            imputed_history: None,
+            scenario_paths: None,
+            regime_probabilities: Some(BTreeMap::from([("stable".into(), 1.0)])),
+            regime_timeline: Some(vec![
+                RegimeStep {
+                    horizon_index: 0,
+                    label: "stable".into(),
+                    probability: 0.9,
+                    change_point_probability: 0.1,
+                    volatility_state: "normal".into(),
+                },
+                RegimeStep {
+                    horizon_index: 1,
+                    label: "transition_risk".into(),
+                    probability: 0.6,
+                    change_point_probability: 0.6,
+                    volatility_state: "expanding".into(),
+                },
+                RegimeStep {
+                    horizon_index: 2,
+                    label: "transition_risk".into(),
+                    probability: 0.5,
+                    change_point_probability: 0.6,
+                    volatility_state: "expanding".into(),
+                },
+            ]),
+            constraint_report: None,
+            retrieval_matches: None,
+            explanation: None,
+            metadata: BTreeMap::new(),
+        });
+
+        assert_eq!(chart.segments.len(), 2);
+        assert_eq!(chart.segments[0].label, "stable");
+        assert_eq!(chart.segments[1].start, "1");
+        assert_eq!(chart.segments[1].end, "3");
     }
 
     #[test]

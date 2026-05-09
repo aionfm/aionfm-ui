@@ -1,6 +1,7 @@
 use aionfm_utils::{
     AdaptationRequest, BatchForecastRequest, EvaluationReport, EvaluationRequest, ForecastResponse,
-    InterpretationRequest, ModelDescriptor, ScenarioRequest, ServiceStatus,
+    InterpretationRequest, ModelDescriptor, PrivacyMode, RequestContext, ScenarioRequest,
+    ServiceStatus,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -11,6 +12,16 @@ pub struct UiApiConfig {
     pub base_url: String,
     #[serde(default)]
     pub api_key: Option<String>,
+    #[serde(default)]
+    pub tenant_id: Option<String>,
+    #[serde(default)]
+    pub actor_id: Option<String>,
+    #[serde(default)]
+    pub trace_id: Option<String>,
+    #[serde(default)]
+    pub purpose: Option<String>,
+    #[serde(default)]
+    pub privacy_mode: PrivacyMode,
 }
 
 impl Default for UiApiConfig {
@@ -18,6 +29,11 @@ impl Default for UiApiConfig {
         Self {
             base_url: "/".into(),
             api_key: None,
+            tenant_id: None,
+            actor_id: None,
+            trace_id: None,
+            purpose: None,
+            privacy_mode: PrivacyMode::Standard,
         }
     }
 }
@@ -29,6 +45,16 @@ impl UiApiConfig {
             self.base_url.trim_end_matches('/'),
             path.trim_start_matches('/')
         )
+    }
+
+    pub fn request_context(&self) -> RequestContext {
+        RequestContext {
+            tenant_id: self.tenant_id.clone(),
+            actor_id: self.actor_id.clone(),
+            trace_id: self.trace_id.clone(),
+            purpose: self.purpose.clone(),
+            privacy_mode: self.privacy_mode.clone(),
+        }
     }
 }
 
@@ -93,6 +119,24 @@ impl WasmApiService {
         if let Some(api_key) = &self.config.api_key {
             request = request.header("x-api-key", api_key);
         }
+        if let Some(tenant_id) = &self.config.tenant_id {
+            request = request.header("x-aionfm-tenant-id", tenant_id);
+        }
+        if let Some(actor_id) = &self.config.actor_id {
+            request = request.header("x-aionfm-actor-id", actor_id);
+        }
+        if let Some(trace_id) = &self.config.trace_id {
+            request = request.header("x-request-id", trace_id);
+        }
+        if let Some(purpose) = &self.config.purpose {
+            request = request.header("x-aionfm-purpose", purpose);
+        }
+        if self.config.privacy_mode != PrivacyMode::Standard {
+            request = request.header(
+                "x-aionfm-privacy-mode",
+                &self.config.privacy_mode.to_string(),
+            );
+        }
         decode_response(request.send().await).await
     }
 
@@ -104,6 +148,24 @@ impl WasmApiService {
         let mut request = gloo_net::http::Request::post(&self.config.endpoint(path));
         if let Some(api_key) = &self.config.api_key {
             request = request.header("x-api-key", api_key);
+        }
+        if let Some(tenant_id) = &self.config.tenant_id {
+            request = request.header("x-aionfm-tenant-id", tenant_id);
+        }
+        if let Some(actor_id) = &self.config.actor_id {
+            request = request.header("x-aionfm-actor-id", actor_id);
+        }
+        if let Some(trace_id) = &self.config.trace_id {
+            request = request.header("x-request-id", trace_id);
+        }
+        if let Some(purpose) = &self.config.purpose {
+            request = request.header("x-aionfm-purpose", purpose);
+        }
+        if self.config.privacy_mode != PrivacyMode::Standard {
+            request = request.header(
+                "x-aionfm-privacy-mode",
+                &self.config.privacy_mode.to_string(),
+            );
         }
         let request = request
             .json(body)
@@ -174,5 +236,24 @@ where
             .await
             .unwrap_or_else(|_| "unable to read error body".into());
         Err(UiApiError::Api { status, message })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_request_context_from_config() {
+        let config = UiApiConfig {
+            tenant_id: Some("tenant_a".into()),
+            actor_id: Some("operator_1".into()),
+            privacy_mode: PrivacyMode::TenantIsolated,
+            ..Default::default()
+        };
+        let context = config.request_context();
+        assert_eq!(context.tenant_id.as_deref(), Some("tenant_a"));
+        assert_eq!(context.actor_id.as_deref(), Some("operator_1"));
+        assert_eq!(context.privacy_mode, PrivacyMode::TenantIsolated);
     }
 }
